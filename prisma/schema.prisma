@@ -1,0 +1,95 @@
+generator client {
+    provider = "prisma-client-js"
+    previewFeatures = ["interactiveTransactions"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url = env("DATABASE_URL")
+}
+
+model Temperature {
+    id   String @id @default(uuid())
+    value Float
+    timestamp DateTime @default(now())
+    deviceId String
+    device Device @relation(fields: [deviceId],references: [id])
+}
+
+model AirHumidity {
+    id   String @id @default(uuid())
+    value Float
+    timestamp DateTime @default(now())
+    deviceId String
+    device Device @relation(fields: [deviceId],references: [id])
+}
+
+model GroundHumidity {
+    id   String @id @default(uuid())
+    value Float
+    timestamp DateTime @default(now())
+    deviceId String
+    device Device @relation(fields: [deviceId],references: [id])
+}
+
+model H2OLevel {
+    id   String @id @default(uuid())
+    isLow Boolean @default(false)
+    deviceId String @unique
+    device Device @relation(fields: [deviceId],references: [id])
+}
+
+model Log {
+    id   String @id @default(uuid())
+    timestamp DateTime @default(now())
+    status DeviceStatuses
+    message String
+    deviceId String
+    device Device @relation(fields: [deviceId],references: [id])
+}
+
+model Device {
+    id   String @id @default(uuid())
+    API_TOKEN String @unique
+    socketId String? @unique
+
+    temperatures Temperature[]
+    airHumidities AirHumidity[]
+    groundHumidities GroundHumidity[]
+    H2OLevel H2OLevel?
+
+    type DeviceType
+    isPerformingAction Boolean @default(false)
+
+    logs Log[]
+
+    userId String
+    user User @relation(fields: [userId],references: [id])
+}
+model Settings {
+    id   String @id @default(uuid())
+    lowAirHumidityLevel Float @default(15)
+    lowGroundHumidityLevel Float @default(15)
+    highTemperatureLevel Float @default(20)
+    userId String @unique
+    user User @relation(fields: [userId],references: [id])
+}
+
+model User {
+    id   String @id @default(uuid())
+    API_TOKEN String @unique
+    socketId String? @unique
+    devices Device[]
+    settings Settings?
+}
+
+enum DeviceStatuses {
+    Enabled
+    Disabled
+}
+
+enum DeviceType {
+    CUW
+    CUT
+    IU
+}
