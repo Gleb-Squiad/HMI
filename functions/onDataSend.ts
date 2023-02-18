@@ -77,7 +77,7 @@ export default async function onDataSend(data:Data,type:IUDeviceType,socketID:st
 
             if (type == "THLevel"){ 
                 userSocket!.emit('THLevel',data)
-                await checkLevels(io,data as THData,user.id)
+                // await checkLevels(io,data as THData,user.id)
             }else{
                 userSocket!.emit('WLevel',data)
             }
