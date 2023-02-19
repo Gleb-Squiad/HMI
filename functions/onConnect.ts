@@ -1,3 +1,4 @@
+import { Socket } from "socket.io"
 import { prisma } from "../prisma/prisma"
 
 enum DeviceType{
@@ -5,7 +6,7 @@ enum DeviceType{
     "IOT"
 }
 
-export default async function OnSocketConnect(token:string,type:DeviceType,socketId:string){
+export default async function OnSocketConnect(token:string,type:DeviceType,socket:Socket,sensors:string[]){
     try{
         if (type == DeviceType.User){
             const dbUser = await prisma.user.findUnique({
@@ -23,7 +24,7 @@ export default async function OnSocketConnect(token:string,type:DeviceType,socke
                     id:dbUser.id
                 },
                 data:{
-                    socketId:socketId
+                    socketId:socket.id
                 }
             })
         }else{
@@ -43,17 +44,24 @@ export default async function OnSocketConnect(token:string,type:DeviceType,socke
                         id:dbDevice.id
                     },
                     data:{
-                        socketId:socketId
+                        socketId:socket.id
                     }
                 })
 
-                await tx.log.create({
-                    data:{
-                        status:"Enabled",
-                        message:"IOT device connected successfully",
-                        deviceId:dbDevice.id
-                    }
-                })
+                if (sensors.length == 0){
+                    throw new Error('Sensors should be passed')
+                }
+
+                Promise.all([sensors.forEach(async (sensor)=>{
+                    await prisma.sensor.update({
+                        where:{
+                            id:sensor
+                        },
+                        data:{
+                            isWorking:true
+                        }
+                    })
+                })])
             })
         }
     }catch(e){

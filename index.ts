@@ -1,14 +1,22 @@
-import { AirHumidity, GroundHumidity, Log, Temperature } from '@prisma/client';
+import { AirHumidity, GroundHumidity, SensorType, Temperature } from '@prisma/client';
 import express, { Express, Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import OnSocketConnect from './functions/onConnect';
+import onDataSend from './functions/onDataSend';
 import onSocketDisconnect from './functions/onDisconnect';
+import onSettingsChange from './functions/onSettingsChange';
 import { prisma } from './prisma/prisma';
 
 enum DeviceType{
   "User",
   "IOT"
+}
+
+type SensorObj = {
+  id:string
+  isWorking: boolean
+  type: SensorType
 }
 
 const app: Express = express();
@@ -18,19 +26,29 @@ const io = new Server(server)
 const port = 3000;
 
 io.on('connection', async (socket) =>{
-  socket.on('disconnect',(data)=>{
-      onSocketDisconnect(socket.id)
+  socket.on('disconnect',async (data)=>{
+      await onSocketDisconnect(socket.id)
+  })
+
+  socket.on('change_settings',async (data)=>{
+    await onSettingsChange(socket,io,data.lowAirHumidityLevel,data.lowGroundHumidityLevel,data.highTemperatureLevel)
+  })
+
+  socket.on('change_data',async (data)=>{
+    await onDataSend(data,socket,io)
   })
 
   const deviceType = socket.handshake.query.type;
   const token = socket.handshake.headers.authorization;
   console.log(token,deviceType)
 
-  if (typeof(token)!=='string' || typeof(deviceType)!=='string'){
+  if (typeof(token)!=='string' || typeof(deviceType)!=='string' || typeof(socket.handshake.query.sensors)!=='string'){
     socket.disconnect()
   }
 
-  await OnSocketConnect(token as string,deviceType==='User'?DeviceType.User:DeviceType.IOT,socket.id)
+  const sensors = socket.handshake.query.sensors as string;
+
+  await OnSocketConnect(token as string,deviceType==='User'?DeviceType.User:DeviceType.IOT,socket,sensors.split(','))
 
   if (deviceType === 'User'){
     const data = await prisma.user.findUnique({
@@ -40,11 +58,14 @@ io.on('connection', async (socket) =>{
       include:{
         devices:{
           include:{
-            H2OLevel:true,
-            airHumidities:true,
-            groundHumidities:true,
-            temperatures:true,
-            logs:true
+            sensors:{
+              include:{
+                H2OLevel:true,
+                airHumidities:true,
+                groundHumidities:true,
+                temperatures:true,
+              }
+            }
           }
         }
       }
@@ -55,14 +76,23 @@ io.on('connection', async (socket) =>{
     let groundHumidities:GroundHumidity[] = []
     let temperatures:Temperature[] = []
     let waterLevel = undefined
-    let logs:Log[] = []
+    let sensors:SensorObj[] = []
 
     data?.devices.forEach((device)=>{
-      airHumidities = airHumidities.concat(device.airHumidities)
-      groundHumidities = groundHumidities.concat(device.groundHumidities)
-      waterLevel = waterLevel = device.H2OLevel?.isLow
-      logs = logs.concat(device.logs)
-      temperatures = temperatures.concat(device.temperatures)
+      device.sensors.forEach((sensor)=>{
+        airHumidities = airHumidities.concat(sensor.airHumidities)
+        groundHumidities = groundHumidities.concat(sensor.groundHumidities)
+        waterLevel = waterLevel = sensor.H2OLevel?.isLow
+        temperatures = temperatures.concat(sensor.temperatures)
+
+        const sensorObj = {
+          id:sensor.id,
+          isWorking: sensor.isWorking,
+          type: sensor.type
+        }
+
+        sensors.push(sensorObj)
+      })
     })
 
     io.emit("Data",{
@@ -70,10 +100,9 @@ io.on('connection', async (socket) =>{
       groundHumidities:groundHumidities,
       temperatures:temperatures,
       waterLevel:waterLevel,
-      logs:logs
+      sensors:sensors
     })
   }
-  
 })
 
 app.get('/', (req: Request, res: Response) => {

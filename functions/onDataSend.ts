@@ -1,4 +1,4 @@
-import { Server } from "socket.io"
+import { Server, Socket } from "socket.io"
 import { prisma } from "../prisma/prisma"
 import checkLevels from "./checkLevels"
 
@@ -14,40 +14,45 @@ type WData ={
 
 type Data = THData|WData
 
-type IUDeviceType = 'WLevel'|'THLevel'
+// type IUDeviceType = 'WLevel'|'THLevel'
 
-export default async function onDataSend(data:Data,type:IUDeviceType,socketID:string,io:Server){
+export default async function onDataSend(data:Data,socket:Socket,io:Server){
     try{
         const device = await prisma.device.findUnique({
             where:{
-                socketId:socketID
+                socketId:socket.id
+            },
+            include:{
+                sensors:true
             }
         })
 
         if (device == null) throw new Error("Error updating data")
 
-        if (type == "THLevel"){
+        if (device.type == "IUTH"){
             const typedData = data as THData
+
+            await checkLevels(io,device.userId,socket.id,typedData)
 
             await prisma.$transaction(async (tx)=>{
                 await tx.airHumidity.create({
                     data:{
                         value:typedData.airHumidity,
-                        deviceId:device.id
+                        sensorId:device.sensors.filter((sensor)=>sensor.type === "AirHumidity")[0].id
                     }
                 })
 
                 await tx.groundHumidity.create({
                     data:{
                         value:typedData.groundHumidity,
-                        deviceId:device.id
+                        sensorId:device.sensors.filter((sensor)=>sensor.type === 'GroundHumidity')[0].id
                     }
                 })
 
                 await tx.temperature.create({
                     data:{
                         value:typedData.temperature,
-                        deviceId:device.id
+                        sensorId:device.sensors.filter((sensor)=>sensor.type === 'Temperature')[0].id
                     }
                 })
             })
@@ -56,7 +61,7 @@ export default async function onDataSend(data:Data,type:IUDeviceType,socketID:st
 
             await prisma.h2OLevel.update({
                 where:{
-                    deviceId:device.id
+                    sensorId:device.sensors.filter((sensor)=>sensor.type === 'WaterLevel')[0].id
                 },
                 data:{
                     isLow:typedData.isLow
@@ -75,9 +80,8 @@ export default async function onDataSend(data:Data,type:IUDeviceType,socketID:st
         if (user.socketId!=null){
             const userSocket = io.sockets.sockets.get(user.socketId)
 
-            if (type == "THLevel"){ 
+            if (device.type == "IUTH"){ 
                 userSocket!.emit('THLevel',data)
-                // await checkLevels(io,data as THData,user.id)
             }else{
                 userSocket!.emit('WLevel',data)
             }

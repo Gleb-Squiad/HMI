@@ -12,40 +12,45 @@ model Temperature {
     id   String @id @default(uuid())
     value Float
     timestamp DateTime @default(now())
-    deviceId String
-    device Device @relation(fields: [deviceId],references: [id])
+    sensorId String
+    sensor Sensor @relation(fields: [sensorId],references: [id])
 }
 
 model AirHumidity {
     id   String @id @default(uuid())
     value Float
     timestamp DateTime @default(now())
-    deviceId String
-    device Device @relation(fields: [deviceId],references: [id])
+    sensorId String
+    sensor Sensor @relation(fields: [sensorId],references: [id])
 }
 
 model GroundHumidity {
     id   String @id @default(uuid())
     value Float
     timestamp DateTime @default(now())
-    deviceId String
-    device Device @relation(fields: [deviceId],references: [id])
+    sensorId String
+    sensor Sensor @relation(fields: [sensorId],references: [id])
 }
 
 model H2OLevel {
     id   String @id @default(uuid())
     isLow Boolean @default(false)
-    deviceId String @unique
-    device Device @relation(fields: [deviceId],references: [id])
+    sensorId String @unique
+    sensor Sensor @relation(fields: [sensorId],references: [id])
 }
 
-model Log {
+model Sensor {
     id   String @id @default(uuid())
-    timestamp DateTime @default(now())
-    status DeviceStatuses
-    message String
+    isWorking Boolean @default(false)
+    type SensorType
+
+    temperatures Temperature[]
+    airHumidities AirHumidity[]
+    groundHumidities GroundHumidity[]
+    H2OLevel H2OLevel?
+
     deviceId String
-    device Device @relation(fields: [deviceId],references: [id])
+    device Device @relation(fields: [deviceId],references:[id])
 }
 
 model Device {
@@ -53,15 +58,10 @@ model Device {
     API_TOKEN String @unique
     socketId String? @unique
 
-    temperatures Temperature[]
-    airHumidities AirHumidity[]
-    groundHumidities GroundHumidity[]
-    H2OLevel H2OLevel?
-
     type DeviceType
     isPerformingAction Boolean @default(false)
 
-    logs Log[]
+    sensors Sensor[]
 
     userId String
     user User @relation(fields: [userId],references: [id])
@@ -91,5 +91,13 @@ enum DeviceStatuses {
 enum DeviceType {
     CUW
     CUT
-    IU
+    IUW
+    IUTH
+}
+
+enum SensorType {
+    Temperature
+    AirHumidity
+    GroundHumidity
+    WaterLevel
 }

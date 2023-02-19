@@ -1,10 +1,5 @@
 import { prisma } from "../prisma/prisma";
 
-enum DeviceType{
-    "User",
-    "IOT"
-}
-
 export default async function onSocketDisconnect(socketId:string){
     try{
         const dbUser = await prisma.user.findUnique({
@@ -20,12 +15,6 @@ export default async function onSocketDisconnect(socketId:string){
         })
 
         if (dbUser!=null){
-            // const dbUser = await prisma.user.findUnique({
-            //     where:{
-            //         socketId:socketId
-            //     }
-            // })
-    
             if (dbUser==null){
                 throw new Error('Disconnect error. No device found')
             }
@@ -38,13 +27,7 @@ export default async function onSocketDisconnect(socketId:string){
                     socketId:null
                 }
             })
-        }else{
-            // const dbDevice = await prisma.user.findUnique({
-            //     where:{
-            //         socketId:socketId
-            //     }
-            // })
-    
+        }else{    
             if (dbDevice==null){
                 throw new Error('Disconnect error. No device found')
             }
@@ -58,12 +41,13 @@ export default async function onSocketDisconnect(socketId:string){
                         socketId:null
                     }
                 })
-    
-                await tx.log.create({
-                    data:{
-                        status:"Disabled",
-                        message:"IOT device disconnected",
+
+                await tx.sensor.updateMany({
+                    where:{
                         deviceId:dbDevice.id
+                    },
+                    data:{
+                        isWorking:false
                     }
                 })
             })
