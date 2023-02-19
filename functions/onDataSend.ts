@@ -81,9 +81,9 @@ export default async function onDataSend(data:Data,socket:Socket,io:Server){
             const userSocket = io.sockets.sockets.get(user.socketId)
 
             if (device.type == "IUTH"){ 
-                userSocket!.emit('THLevel',data)
+                userSocket!.emit('THLevelUpdate',data)
             }else{
-                userSocket!.emit('WLevel',data)
+                userSocket!.emit('WLevelUpdate',data)
             }
         }
     }catch(e){
