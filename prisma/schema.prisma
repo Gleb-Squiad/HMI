@@ -100,4 +100,5 @@ enum SensorType {
     AirHumidity
     GroundHumidity
     WaterLevel
+    Controller
 }
