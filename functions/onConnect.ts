@@ -6,7 +6,7 @@ enum DeviceType{
     "IOT"
 }
 
-export default async function OnSocketConnect(token:string,type:DeviceType,socket:Socket,sensors:string[]){
+export default async function OnSocketConnect(token:string,type:DeviceType,socket:Socket,sensors?:string[]){
     try{
         if (type == DeviceType.User){
             const dbUser = await prisma.user.findUnique({
@@ -48,11 +48,11 @@ export default async function OnSocketConnect(token:string,type:DeviceType,socke
                     }
                 })
 
-                if (sensors.length == 0){
+                if (sensors!.length == 0){
                     throw new Error('Sensors should be passed')
                 }
 
-                Promise.all([sensors.forEach(async (sensor)=>{
+                Promise.all([sensors!.forEach(async (sensor)=>{
                     await prisma.sensor.update({
                         where:{
                             id:sensor

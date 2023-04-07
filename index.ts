@@ -27,6 +27,7 @@ const port = 3000;
 
 io.on('connection', async (socket) =>{
   socket.on('disconnect',async (data)=>{
+      console.log('disconnecting')
       await onSocketDisconnect(socket.id)
   })
 
@@ -42,13 +43,27 @@ io.on('connection', async (socket) =>{
   const token = socket.handshake.headers.authorization;
   console.log(token,deviceType)
 
-  if (typeof(token)!=='string' || typeof(deviceType)!=='string' || typeof(socket.handshake.query.sensors)!=='string'){
+  if (typeof(token)!=='string' || typeof(deviceType)!=='string'){
     socket.disconnect()
   }
 
-  const sensors = socket.handshake.query.sensors as string;
+  let socketArray = undefined 
+  
+  if (deviceType!=='User'){
+    if (typeof(socket.handshake.query.sensors)!=='string'){
+      socket.disconnect()
+    }
+    
+    const sensors = socket.handshake.query.sensors as string;
 
-  await OnSocketConnect(token as string,deviceType==='User'?DeviceType.User:DeviceType.IOT,socket,sensors.split(','))
+    if (!sensors.includes(',')){
+      socket.disconnect()
+    }
+
+    socketArray = sensors.split(',')
+  }
+
+  await OnSocketConnect(token as string,deviceType==='User'?DeviceType.User:DeviceType.IOT,socket,socketArray)
 
   if (deviceType === 'User'){
     const data = await prisma.user.findUnique({
