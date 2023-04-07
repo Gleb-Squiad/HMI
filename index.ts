@@ -97,7 +97,9 @@ io.on('connection', async (socket) =>{
       device.sensors.forEach((sensor)=>{
         airHumidities = airHumidities.concat(sensor.airHumidities)
         groundHumidities = groundHumidities.concat(sensor.groundHumidities)
-        waterLevel = waterLevel = sensor.H2OLevel?.isLow
+        if (sensor.H2OLevel!=undefined){
+          waterLevel = sensor.H2OLevel?.isLow
+        }
         temperatures = temperatures.concat(sensor.temperatures)
 
         const sensorObj = {
@@ -109,6 +111,8 @@ io.on('connection', async (socket) =>{
         sensors.push(sensorObj)
       })
     })
+
+    console.log(waterLevel)
 
     io.emit("Data",{
       airHumidities:airHumidities,
