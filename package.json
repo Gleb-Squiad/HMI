@@ -7,7 +7,8 @@
     "build": "npx tsc",
     "start": "node ./index.ts",
     "dev": "nodemon ./index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:migrate": "npx prisma db push && npm run start"
   },
   "keywords": [],
   "author": "",

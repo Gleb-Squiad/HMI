@@ -23,7 +23,7 @@ const app: Express = express();
 const server = createServer(app);
 const io = new Server(server)
 
-const port = 3000;
+const port = 4000;
 
 io.on('connection', async (socket) =>{
   socket.on('disconnect',async (data)=>{
